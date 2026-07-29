@@ -1,4 +1,5 @@
 import boto3
+import os      
 import sys
 from botocore.exceptions import ClientError
 
@@ -48,6 +49,41 @@ def show_menu():
         sys.exit(1)
 
     return CLIENTS[choice]
+
+def get_account_by_name(client_name):
+
+    for account in CLIENTS.values():
+
+        if account["client_name"].lower() == client_name.lower():
+            return account
+
+        # Support short names used in Jenkins
+        aliases = {
+            "BOQ": "Bank of Queensland (BoQ)",
+            "MGL": "Macquarie (MGL)",
+            "LFS": "Latitude (LFS)",
+            "BHFS": "BHFS",
+            "ATB": "ATB",
+            "COOP": "Coop",
+            "EQUIFAX": "Equifax",
+            "FLEETCOR": "FleetCor",
+            "GENERALI": "Generali",
+            "IAG": "IAG",
+            "MIZUHO": "Mizuho",
+            "NBS": "NationWide (NBS)",
+            "SUNCORP": "Suncorp",
+            "TABCORP": "TabCorp"
+        }
+
+    if client_name.upper() in aliases:
+
+        actual_name = aliases[client_name.upper()]
+
+        for account in CLIENTS.values():
+            if account["client_name"] == actual_name:
+                return account
+
+    return None
 
 # =============================================================================
 # ASSUME ROLE
@@ -200,12 +236,41 @@ def check_ec2(session, regions):
 
 def main():
 
-    account = show_menu()
+    # ---------------------------------------------------------
+    # Check if running from Jenkins
+    # ---------------------------------------------------------
+
+    selected_client = os.getenv("CLIENT")
+
+    # ---------------------------------------------------------
+    # If Jenkins parameter exists
+    # ---------------------------------------------------------
+
+    if selected_client:
+
+        print("\nRunning from Jenkins")
+        print("-----------------------------")
+        print(f"Selected Client : {selected_client}")
+
+        account = get_account_by_name(selected_client)
+
+        if account is None:
+            print("Invalid CLIENT parameter.")
+            sys.exit(1)
+
+    # ---------------------------------------------------------
+    # Otherwise run locally
+    # ---------------------------------------------------------
+
+    else:
+
+        account = show_menu()
 
     print("\nSelected Client")
-    print("-" * 60)
-    print("Client     :", account["client_name"])
-    print("Account ID :", account["account_id"])
+    print("-" * 50)
+
+    print(f"Client Name : {account['client_name']}")
+    print(f"Account ID  : {account['account_id']}")
 
     print("\nAssuming Role...")
 
@@ -219,18 +284,19 @@ def main():
 
         print("FAILED")
         print(e)
-        sys.exit()
+        sys.exit(1)
 
-    print("\nDiscovering AWS Regions...")
+    print("\nDiscovering AWS Regions...\n")
 
     regions = discover_regions(session)
 
     for region in regions:
-        print("✓", region)
+        print(f"✓ {region}")
 
     print(f"\nTotal Regions : {len(regions)}")
 
     check_ec2(session, regions)
+
 
 if __name__ == "__main__":
     main()
