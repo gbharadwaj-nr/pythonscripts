@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     stages {
-        stage('Run Python Script') {
+        stage('Run Health Check') {
             steps {
                 bat 'python healthcheck.py'
             }
