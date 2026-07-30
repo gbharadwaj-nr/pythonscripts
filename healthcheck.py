@@ -291,7 +291,7 @@ def main():
     regions = discover_regions(session)
 
     for region in regions:
-        print(f"✓ {region}")
+        print(f"[OK] {region}")
 
     print(f"\nTotal Regions : {len(regions)}")
 
