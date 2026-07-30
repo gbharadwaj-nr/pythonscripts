@@ -118,9 +118,25 @@ def discover_regions(session):
 
     ec2 = session.client("ec2", region_name="us-east-1")
 
-    response = ec2.describe_regions(AllRegions=False)
+    all_regions = [r["RegionName"] for r in ec2.describe_regions()["Regions"]]
 
-    return [r["RegionName"] for r in response["Regions"]]
+    active_regions = []
+
+    for region in all_regions:
+
+        ec2 = session.client("ec2", region_name=region)
+
+        instances = ec2.describe_instances()
+
+        has_instances = any(
+            reservation["Instances"]
+            for reservation in instances["Reservations"]
+        )
+
+        if has_instances:
+            active_regions.append(region)
+
+    return active_regions
 
 # =============================================================================
 # EC2 CHECK
